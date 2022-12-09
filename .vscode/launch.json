@@ -9,11 +9,12 @@
             "type": "python",
             "request": "launch",
             "program": "main.py",
+            "args" : ["config.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
         {
-            "name": "Python: Train",
+            "name": "Python: Evaluate",
             "type": "python",
             "request": "launch",
             "program": "evaluate.py",

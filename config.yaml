@@ -1,0 +1,24 @@
+application: 'Protein Classification'
+
+training:
+  train_on_validation: False
+  batch_size: 4
+  num_workers: 12
+  learning_rate: 0.001
+  num_epochs: 50
+  tb_log_dir: './log/'
+  continue_train_id:
+  enable_gpu: False
+  save_model: True
+  compute_metrics : True
+  compute_metrics_every: 5
+
+model:
+  feature_extractor: 'resnet34'
+  pretrained: True
+
+data_pipe:
+  path: 'D:\master\Bio\project\human-protein-atlas-image-classification'
+  annotations: 'train.csv'
+  train_dir: 'train'
+  test_dir: 'test'
