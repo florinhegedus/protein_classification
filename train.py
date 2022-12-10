@@ -25,7 +25,8 @@ def main():
                                                                     val_iter, 
                                                                     num_epochs=config['training']['num_epochs'], 
                                                                     lr=config['training']['learning_rate'], 
-                                                                    device=try_gpu())
+                                                                    device=try_gpu(),
+                                                                    save_model=config['training']['save_model'])
     
     
 if __name__ == '__main__':

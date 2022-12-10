@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import torch
-import torch.nn as nn
 from common.focal_loss import FocalLoss
+
 
 def display_image(img_path):
     colors = ['red', 'green', 'blue']
@@ -19,6 +19,10 @@ def try_gpu(i=0):
     if torch.cuda.device_count() >= i + 1:
         return torch.device(f'cuda:{i}')
     return torch.device('cpu')
+
+def save_model(net):
+    print("Saving model...")
+    torch.save(net.state_dict(), 'model.pth')
 
 def acc(preds, targs, threshold=0.0):
     preds = (preds > threshold).int()
@@ -49,8 +53,12 @@ def train_epoch(net, train_iter, loss, optimizer, device):
     total_loss = 0
     total_hits = 0
     total_samples = 0
+    steps = 0
     for X, y in train_iter:
         # Compute gradients and update parameters
+        steps += 1
+        if steps % 10 == 0:
+            print("   step " + str(steps) + "/" + str(len(train_iter)), end="\r")
         X, y = X.to(device), y.to(device)
         y_hat = net(X)
         l = loss(y_hat, y)
@@ -64,7 +72,7 @@ def train_epoch(net, train_iter, loss, optimizer, device):
     # Return training loss and training accuracy
     return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
 
-def train(net, train_iter, val_iter, num_epochs, lr, device):
+def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
@@ -74,11 +82,15 @@ def train(net, train_iter, val_iter, num_epochs, lr, device):
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = FocalLoss()
+    min_val_loss = 1000.0
     for epoch in range(num_epochs):
         train_loss, train_acc = train_epoch(net, train_iter, loss, optimizer, device)
         train_loss_all.append(train_loss)
         train_acc_all.append(train_acc)
         val_loss, val_acc = evaluate_accuracy(net, val_iter, loss, device)
+        if val_loss < min_val_loss and save_model:
+            min_val_loss = val_loss
+            save_model(net)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
