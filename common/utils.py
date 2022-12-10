@@ -90,7 +90,7 @@ def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
         val_loss, val_acc = evaluate_accuracy(net, val_iter, loss, device)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
-        print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}'
+        print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
 
         # save model if it has lower loss and save_model equals True
         if val_loss < min_val_loss and save_model:
