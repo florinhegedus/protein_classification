@@ -2,7 +2,7 @@ import sys
 import yaml
 from common.dataset import load_data
 from common.utils import train, try_gpu
-from models.resnet import ResNet
+from models.resnet import load_model
 
 
 def main():
@@ -14,10 +14,9 @@ def main():
 
     print("Loading Human Protein Atlas Dataset...")
     train_iter, val_iter = load_data(config)
-    train_features, train_labels = next(iter(train_iter))
 
     print("Loading model...")
-    model = ResNet(config['model'])
+    model = load_model(config['model'])
 
     print("Starting training...")
     train_loss_all, train_acc_all, val_loss_all, val_acc_all = train(model, 

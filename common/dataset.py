@@ -72,7 +72,7 @@ def load_data(config):
 
     dataset = ProteinAtlasDataset(annotations_file=annotations_file,
                                     img_dir=img_dir,
-                                    img_size=config['training']['image_size'])
+                                    img_size=config['model']['image_size'])
     train_val_split = config['training']['train_val_split']
     no_train = math.ceil(len(dataset) * train_val_split)
     no_val = math.floor(len(dataset) * (1 - train_val_split))

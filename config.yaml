@@ -2,18 +2,18 @@ application: 'Protein Classification'
 
 training:
   train_on_validation: False
-  batch_size: 4
+  batch_size: 8
   num_workers: 4
   learning_rate: 0.001
-  train_val_split: 0.8
-  image_size: [128, 128]
+  train_val_split: 0.7
   num_epochs: 50
   save_model: True
 
 model:
-  type: 'resnet18'
+  type: 'resnet34'
+  image_size: [128, 128]
   continue_training: False
-  weights_path: 'checkpoints/'
+  weights_path: 'model.pth'
 
 data_pipe:
   path: 'D:\master\Bio\project\human-protein-atlas-image-classification'
