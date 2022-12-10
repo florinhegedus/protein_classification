@@ -20,9 +20,9 @@ def try_gpu(i=0):
         return torch.device(f'cuda:{i}')
     return torch.device('cpu')
 
-def save_model_weights(net):
+def save_model_weights(net, epoch):
     print("Saving model...")
-    torch.save(net.state_dict(), 'model.pth')
+    torch.save(net.state_dict(), str(epoch) + '.pth')
 
 def acc(preds, targs, threshold=0.0):
     preds = (preds > threshold).int()
@@ -90,7 +90,7 @@ def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
         val_loss, val_acc = evaluate_accuracy(net, val_iter, loss, device)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
-        print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
+        print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}'
 
         # save model if it has lower loss and save_model equals True
         if val_loss < min_val_loss and save_model:
