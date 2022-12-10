@@ -1,7 +1,9 @@
 import cv2
-import os
 import numpy as np
 from matplotlib import pyplot as plt
+import torch
+import torch.nn as nn
+from common.focal_loss import FocalLoss
 
 def display_image(img_path):
     colors = ['red', 'green', 'blue']
@@ -11,6 +13,34 @@ def display_image(img_path):
     img = np.stack(img, axis=-1)
     plt.imshow(img, interpolation='nearest')
     plt.show()
+
+def try_gpu(i=0):
+    """Return gpu(i) if exists, otherwise return cpu()."""
+    if torch.cuda.device_count() >= i + 1:
+        return torch.device(f'cuda:{i}')
+    return torch.device('cpu')
+
+def acc(preds, targs, threshold=0.0):
+    preds = (preds > threshold).int()
+    targs = targs.int()
+    return (preds==targs).float().mean()
+
+def evaluate_accuracy(net, data_iter, loss, device):
+    """Compute the accuracy for a model on a dataset."""
+    net.eval()  # Set the model to evaluation mode
+
+    total_loss = 0
+    total_hits = 0
+    total_samples = 0
+    with torch.no_grad():
+        for X, y in data_iter:
+            X, y = X.to(device), y.to(device)
+            y_hat = net(X)
+            l = loss(y_hat, y)
+            total_loss += float(l)
+            total_hits += acc(y_hat, y)
+            total_samples += y.numel()
+    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100
 
 def train_epoch(net, train_iter, loss, optimizer, device):  
     # Set the model to training mode
@@ -29,25 +59,21 @@ def train_epoch(net, train_iter, loss, optimizer, device):
         l.backward()
         optimizer.step()
         total_loss += float(l)
-        total_hits += sum(y_hat.argmax(axis=1).type(y.dtype) == y)
+        total_hits += acc(y_hat, y)
         total_samples += y.numel()
     # Return training loss and training accuracy
     return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
 
-def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device):
+def train(net, train_iter, val_iter, num_epochs, lr, device):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
     val_loss_all = []
     val_acc_all = []
-    def init_weights(m):
-        if type(m) == nn.Linear or type(m) == nn.Conv2d:
-            nn.init.xavier_uniform_(m.weight)
-    net.apply(init_weights)
     print('Training on', device)
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
-    loss = nn.CrossEntropyLoss()
+    loss = FocalLoss()
     for epoch in range(num_epochs):
         train_loss, train_acc = train_epoch(net, train_iter, loss, optimizer, device)
         train_loss_all.append(train_loss)
@@ -56,7 +82,5 @@ def train(net, train_iter, val_iter, test_iter, num_epochs, lr, device):
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
-    test_loss, test_acc = evaluate_accuracy(net, test_iter, loss, device)
-    print(f'Test loss {test_loss:.2f}, Test accuracy {test_acc:.2f}')
 
     return train_loss_all, train_acc_all, val_loss_all, val_acc_all

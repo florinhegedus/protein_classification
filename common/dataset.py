@@ -40,32 +40,29 @@ name_label_dict = {
 
 
 class ProteinAtlasDataset(Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+    def __init__(self, annotations_file, img_dir, img_size):
         self.img_labels = pd.read_csv(annotations_file)
         self.img_dir = img_dir
-        self.transform = transform
-        self.target_transform = target_transform
+        self.img_size = img_size
 
     def __len__(self):
         return len(self.img_labels)
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = self.read_rgby(img_path)
+        image = self.read_rgby(img_path, self.img_size)
         targets = np.array([int(x) for x in self.img_labels.iloc[idx, 1].split(' ')])
         label = np.sum(np.eye(len(name_label_dict))[targets], axis=0)
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
         return image, label
     
-    def read_rgby(self, id):
+    def read_rgby(self, id, size):
         colors = ['red', 'green', 'blue', 'yellow']
         flags = cv2.IMREAD_GRAYSCALE
-        img = [cv2.imread(id + '_' + color + '.png', flags).astype(
+        imgs = [cv2.resize(
+                cv2.imread(id + '_' + color + '.png', flags), size).astype(
                             np.float32) / 255 for color in colors]
-        return np.stack(img, axis=-1)
+        imgs = np.stack(imgs, axis=-1)
+        return np.moveaxis(imgs, -1, 0)
 
 def load_data(config):
     annotations_file = os.path.join(config['data_pipe']['path'], 
@@ -73,8 +70,9 @@ def load_data(config):
     img_dir = os.path.join(config['data_pipe']['path'], 
                              config['data_pipe']['train_dir'])
 
-    dataset = ProteinAtlasDataset(annotations_file=annotations_file, 
-                                    img_dir=img_dir)
+    dataset = ProteinAtlasDataset(annotations_file=annotations_file,
+                                    img_dir=img_dir,
+                                    img_size=config['training']['image_size'])
     train_val_split = config['training']['train_val_split']
     no_train = math.ceil(len(dataset) * train_val_split)
     no_val = math.floor(len(dataset) * (1 - train_val_split))

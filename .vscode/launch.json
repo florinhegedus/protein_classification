@@ -8,7 +8,7 @@
             "name": "Python: Train",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "train.py",
             "args" : ["config.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
