@@ -1,9 +1,7 @@
 import sys
-import os
 import yaml
-from torch.utils.data import DataLoader
+from common.dataset import load_data
 
-from common.dataset import ProteinAtlasDataset
 
 def main():
     # Load the configuration file
@@ -11,16 +9,12 @@ def main():
         raise ValueError("Please specify the config file. E.g.: \
                          python main.py config.yaml")
     config = yaml.load(open(sys.argv[1]), Loader=yaml.FullLoader)
-    
-    annotations_file = os.path.join(config['data_pipe']['path'], 
-                                    config['data_pipe']['annotations'])
-    img_dir = os.path.join(config['data_pipe']['path'], 
-                             config['data_pipe']['train_dir'])
 
-    dataset = ProteinAtlasDataset(annotations_file=annotations_file, 
-                                  img_dir=img_dir)
-    for i in range(len(dataset)):
-        sample, label = dataset[i]
+    train_iter, val_iter = load_data(config)
+    
+    train_features, train_labels = next(iter(train_iter))
+    print(train_features.shape)
+    print(train_labels.shape)
     
     
 if __name__ == '__main__':

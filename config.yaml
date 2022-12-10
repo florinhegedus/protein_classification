@@ -3,8 +3,9 @@ application: 'Protein Classification'
 training:
   train_on_validation: False
   batch_size: 4
-  num_workers: 12
+  num_workers: 4
   learning_rate: 0.001
+  train_val_split: 0.8
   num_epochs: 50
   tb_log_dir: './log/'
   continue_train_id:
@@ -15,6 +16,7 @@ training:
 
 model:
   feature_extractor: 'resnet34'
+  image_size: 512
   pretrained: True
 
 data_pipe:

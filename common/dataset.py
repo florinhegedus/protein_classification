@@ -1,8 +1,12 @@
 import os
 import pandas as pd
-from torch.utils.data import Dataset
 import numpy as np
 import cv2
+import math
+import torch
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+
 
 name_label_dict = {
 0:  'Nucleoplasm',
@@ -34,6 +38,7 @@ name_label_dict = {
 26:  'Cytoplasmic bodies',   
 27:  'Rods & rings' }
 
+
 class ProteinAtlasDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
         self.img_labels = pd.read_csv(annotations_file)
@@ -47,7 +52,8 @@ class ProteinAtlasDataset(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         image = self.read_rgby(img_path)
-        label = self.img_labels.iloc[idx, 1]
+        targets = np.array([int(x) for x in self.img_labels.iloc[idx, 1].split(' ')])
+        label = np.sum(np.eye(len(name_label_dict))[targets], axis=0)
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
@@ -61,7 +67,28 @@ class ProteinAtlasDataset(Dataset):
                             np.float32) / 255 for color in colors]
         return np.stack(img, axis=-1)
 
+def load_data(config):
+    annotations_file = os.path.join(config['data_pipe']['path'], 
+                                    config['data_pipe']['annotations'])
+    img_dir = os.path.join(config['data_pipe']['path'], 
+                             config['data_pipe']['train_dir'])
 
+    dataset = ProteinAtlasDataset(annotations_file=annotations_file, 
+                                    img_dir=img_dir)
+    train_val_split = config['training']['train_val_split']
+    no_train = math.ceil(len(dataset) * train_val_split)
+    no_val = math.floor(len(dataset) * (1 - train_val_split))
+    train_set, val_set = torch.utils.data.random_split(dataset, [no_train, no_val],
+                                    generator=torch.Generator().manual_seed(42))
+    
+    train_iter = DataLoader(train_set, 
+                            batch_size=config['training']['batch_size'], 
+                            shuffle=True,
+                            num_workers=config['training']['num_workers'])
+    val_iter = DataLoader(val_set, 
+                            batch_size=config['training']['batch_size'], 
+                            shuffle=True,
+                            num_workers=config['training']['num_workers'])
+    
+    return train_iter, val_iter
 
-
-        
