@@ -10,11 +10,6 @@ class ResNet(nn.Module):
 
         model_type = model_config['type']
         continue_training = model_config['continue_training']
-        img_size = model_config['image_size']
-
-        # hidden layers size
-        # hl_size = int(img_size[0] * img_size[1] / 2)
-        hl_size = 8192
 
         if not continue_training:
             self.encoder = timm.create_model(model_type, num_classes=28, 
@@ -32,15 +27,16 @@ class ResNet(nn.Module):
             self.encoder.layer2,
             self.encoder.layer3,
             self.encoder.layer4,
-            nn.Flatten()
+            self.encoder.global_pool
         )
         self.neck = nn.Sequential(
-            nn.Linear(8192, 4096), 
+            nn.Linear(512, 256), 
             nn.ReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(4096, 2048), 
+            nn.Dropout(p=0.3),
+            nn.Linear(256, 256), 
             nn.ReLU(),
-            nn.Linear(2048, 28)
+            nn.Dropout(p=0.3),
+            nn.Linear(256, 28)
         )
         self.sigmoid = nn.Sigmoid()
 

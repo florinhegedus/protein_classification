@@ -13,7 +13,7 @@ model:
   type: 'resnet34'
   image_size: [128, 128]
   continue_training: False
-  weights_path: 'model.pth'
+  weights_path: 'checkpoints/epoch_0.pth'
 
 data_pipe:
   path: 'D:\master\Bio\project\human-protein-atlas-image-classification'

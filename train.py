@@ -19,14 +19,10 @@ def main():
     model = load_model(config['model'])
 
     print("Starting training...")
-    train_loss_all, train_acc_all, val_loss_all, val_acc_all = train(model, 
-                                                                    train_iter, 
-                                                                    val_iter, 
-                                                                    num_epochs=config['training']['num_epochs'], 
-                                                                    lr=config['training']['learning_rate'], 
-                                                                    device=try_gpu(),
-                                                                    save_model=config['training']['save_model'])
-    
+    train(model, train_iter, val_iter, num_epochs=config['training']['num_epochs'], 
+            lr=config['training']['learning_rate'], device=try_gpu(), 
+            save_model=config['training']['save_model'])
+
     
 if __name__ == '__main__':
     main()

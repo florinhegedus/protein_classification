@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import torch
 from common.focal_loss import FocalLoss
+from sklearn.metrics import f1_score
 
 
 def display_image(img_path):
@@ -22,15 +23,34 @@ def try_gpu(i=0):
 
 def save_model_weights(net, epoch):
     print("Saving model...")
-    torch.save(net.state_dict(), str(epoch) + '.pth')
+    torch.save(net.state_dict(), 'checkpoints/epoch_' + str(epoch) + '.pth')
 
-def acc(preds, targs, threshold=0.0):
+def plot_accuracy(train_acc_all, val_acc_all):
+    epochs = range(1, len(train_acc_all) + 1)
+    plt.plot(epochs, train_acc_all, 'bo', label='Training acc')
+    plt.plot(epochs, val_acc_all, 'b', label='Validation acc')
+    plt.title('Training and validation accuracy')
+    plt.xlabel('Epochs') 
+    plt.ylabel('Accuracy') 
+    plt.legend()
+    plt.savefig('plots/accuracy.png')
+
+def plot_loss(train_loss_all, val_loss_all):
+    epochs = range(1, len(train_loss_all) + 1) 
+    plt.plot(epochs, train_loss_all, 'bo', label='Training loss') 
+    plt.plot(epochs, val_loss_all, 'b', label='Validation loss') 
+    plt.title('Training and validation loss') 
+    plt.xlabel('Epochs') 
+    plt.ylabel('Loss') 
+    plt.legend()  
+    plt.savefig('plots/loss.png')
+
+def acc(preds, targs, threshold=0.2):
     preds = (preds > threshold).int()
     targs = targs.int()
     return (preds==targs).float().mean()
 
 def evaluate_accuracy(net, data_iter, loss, device):
-    """Compute the accuracy for a model on a dataset."""
     net.eval()  # Set the model to evaluation mode
 
     total_loss = 0
@@ -44,7 +64,8 @@ def evaluate_accuracy(net, data_iter, loss, device):
             total_loss += float(l)
             total_hits += acc(y_hat, y)
             total_samples += y.numel()
-    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100
+            valid_f1score = f1_score(y_true=y, y_pred=y_hat>0.1)
+    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100, valid_f1score / total_samples * 28 * 100
 
 def train_epoch(net, train_iter, loss, optimizer, device):  
     # Set the model to training mode
@@ -68,33 +89,41 @@ def train_epoch(net, train_iter, loss, optimizer, device):
         optimizer.step()
         total_loss += float(l)
         total_hits += acc(y_hat, y)
+        train_f1score = f1_score(y_true=y, y_pred=y_hat>0.2, average='samples')
         total_samples += y.numel()
     # Return training loss and training accuracy
-    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100
+    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1score / total_samples * 28 * 100
 
 def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
+    train_f1_all = []
     val_loss_all = []
     val_acc_all = []
+    val_f1_all = []
     print('Training on', device)
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = FocalLoss()
     min_val_loss = 10000.0
     for epoch in range(num_epochs):
-        train_loss, train_acc = train_epoch(net, train_iter, loss, optimizer, device)
+        train_loss, train_acc, train_f1 = train_epoch(net, train_iter, loss, optimizer, device)
         train_loss_all.append(train_loss)
         train_acc_all.append(train_acc)
-        val_loss, val_acc = evaluate_accuracy(net, val_iter, loss, device)
+        train_f1_all.append(train_f1)
+        val_loss, val_acc, val_f1 = evaluate_accuracy(net, val_iter, loss, device)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
-        print(f'Epoch {epoch + 1}, Train loss {train_loss:.2f}, Train accuracy {train_acc:.2f}, Validation loss {val_loss:.2f}, Validation accuracy {val_acc:.2f}')
+        val_f1_all.append(val_f1)
+        print(f'Epoch {epoch + 1}, \
+                    Train loss {train_loss:.4f}, Train accuracy {train_acc:.4f}, Train F1 score {train_f1:.4f}\
+                    Validation loss {val_loss:.4f}, Validation accuracy {val_acc:.4f}, Validation F1 score {val_f1:.4f}')
 
         # save model if it has lower loss and save_model equals True
         if val_loss < min_val_loss and save_model:
             min_val_loss = val_loss
             save_model_weights(net, epoch)
-
-    return train_loss_all, train_acc_all, val_loss_all, val_acc_all
+        
+        plot_loss(train_loss_all, val_loss_all)
+        plot_accuracy(train_acc_all, val_acc_all)
