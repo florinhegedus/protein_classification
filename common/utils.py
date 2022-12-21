@@ -34,6 +34,7 @@ def plot_accuracy(train_acc_all, val_acc_all):
     plt.ylabel('Accuracy') 
     plt.legend()
     plt.savefig('plots/accuracy.png')
+    plt.clf()
 
 def plot_loss(train_loss_all, val_loss_all):
     epochs = range(1, len(train_loss_all) + 1) 
@@ -44,8 +45,9 @@ def plot_loss(train_loss_all, val_loss_all):
     plt.ylabel('Loss') 
     plt.legend()  
     plt.savefig('plots/loss.png')
+    plt.clf()
 
-def acc(preds, targs, threshold=0.2):
+def acc(preds, targs, threshold=0.0):
     preds = (preds > threshold).int()
     targs = targs.int()
     return (preds==targs).float().mean()
@@ -56,6 +58,8 @@ def evaluate_accuracy(net, data_iter, loss, device):
     total_loss = 0
     total_hits = 0
     total_samples = 0
+    total_f1 = 0
+    
     with torch.no_grad():
         for X, y in data_iter:
             X, y = X.to(device), y.to(device)
@@ -64,8 +68,8 @@ def evaluate_accuracy(net, data_iter, loss, device):
             total_loss += float(l)
             total_hits += acc(y_hat, y)
             total_samples += y.numel()
-            valid_f1score = f1_score(y_true=y, y_pred=y_hat>0.1)
-    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100, valid_f1score / total_samples * 28 * 100
+            total_f1 += f1_score(y_true=y.cpu(), y_pred=(y_hat>0.0).cpu(), average='samples')
+    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100, total_f1 / (total_samples / 28 * 100)
 
 def train_epoch(net, train_iter, loss, optimizer, device):  
     # Set the model to training mode
@@ -74,6 +78,7 @@ def train_epoch(net, train_iter, loss, optimizer, device):
     total_loss = 0
     total_hits = 0
     total_samples = 0
+    train_f1 = 0
     steps = 0
     for X, y in train_iter:
         # Compute gradients and update parameters
@@ -89,10 +94,10 @@ def train_epoch(net, train_iter, loss, optimizer, device):
         optimizer.step()
         total_loss += float(l)
         total_hits += acc(y_hat, y)
-        train_f1score = f1_score(y_true=y, y_pred=y_hat>0.2, average='samples')
+        train_f1 += f1_score(y_true=y.cpu(), y_pred=(y_hat>0.0).cpu(), average='samples')
         total_samples += y.numel()
     # Return training loss and training accuracy
-    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1score / total_samples * 28 * 100
+    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1 / (total_samples / 28 * 100)
 
 def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
     """Train a model."""

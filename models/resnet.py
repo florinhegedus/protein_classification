@@ -43,7 +43,7 @@ class ResNet(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         x = self.neck(x)
-        x = self.sigmoid(x)
+        # x = self.sigmoid(x)
         return x
 
 def load_model(model_config):
