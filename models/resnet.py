@@ -32,18 +32,17 @@ class ResNet(nn.Module):
         self.neck = nn.Sequential(
             nn.Linear(512, 256), 
             nn.ReLU(),
-            nn.Dropout(p=0.3),
             nn.Linear(256, 256), 
             nn.ReLU(),
-            nn.Dropout(p=0.3),
-            nn.Linear(256, 28)
+            nn.Linear(256, 28),
+            nn.ReLU()
         )
-        self.sigmoid = nn.Sigmoid()
+        self.activation = nn.Sigmoid()
 
     def forward(self, x):
         x = self.encoder(x)
         x = self.neck(x)
-        # x = self.sigmoid(x)
+        # x = self.activation(x)
         return x
 
 def load_model(model_config):

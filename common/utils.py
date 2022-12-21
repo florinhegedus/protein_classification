@@ -47,12 +47,18 @@ def plot_loss(train_loss_all, val_loss_all):
     plt.savefig('plots/loss.png')
     plt.clf()
 
-def acc(preds, targs, threshold=0.0):
+def acc(preds, targs, threshold):
     preds = (preds > threshold).int()
     targs = targs.int()
     return (preds==targs).float().mean()
 
-def evaluate_accuracy(net, data_iter, loss, device):
+def batch_f1_score(preds, targs, threshold):
+    preds = (preds > threshold).int().cpu()
+    targs = targs.int().cpu()
+    f1_scores = [f1_score(targs[i], preds[i], average='macro') for i in range(len(preds))]
+    return np.array(f1_scores).mean()
+
+def evaluate_accuracy(net, data_iter, loss, device, threshold):
     net.eval()  # Set the model to evaluation mode
 
     total_loss = 0
@@ -66,12 +72,12 @@ def evaluate_accuracy(net, data_iter, loss, device):
             y_hat = net(X)
             l = loss(y_hat, y)
             total_loss += float(l)
-            total_hits += acc(y_hat, y)
+            total_hits += acc(y_hat, y, threshold)
             total_samples += y.numel()
-            total_f1 += f1_score(y_true=y.cpu(), y_pred=(y_hat>0.0).cpu(), average='samples')
+            total_f1 += batch_f1_score(y_hat, y, threshold)
     return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100, total_f1 / (total_samples / 28 * 100)
 
-def train_epoch(net, train_iter, loss, optimizer, device):  
+def train_epoch(net, train_iter, loss, optimizer, device, threshold):  
     # Set the model to training mode
     net.train()
     # Sum of training loss, sum of training correct predictions, no. of examples
@@ -93,13 +99,13 @@ def train_epoch(net, train_iter, loss, optimizer, device):
         l.backward()
         optimizer.step()
         total_loss += float(l)
-        total_hits += acc(y_hat, y)
-        train_f1 += f1_score(y_true=y.cpu(), y_pred=(y_hat>0.0).cpu(), average='samples')
+        total_hits += acc(y_hat, y, threshold)
+        train_f1 += batch_f1_score(y_hat, y, threshold)
         total_samples += y.numel()
     # Return training loss and training accuracy
-    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1 / (total_samples / 28 * 100)
+    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1 / (total_samples / (len(X) * 28))
 
-def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
+def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_model):
     """Train a model."""
     train_loss_all = []
     train_acc_all = []
@@ -113,11 +119,11 @@ def train(net, train_iter, val_iter, num_epochs, lr, device, save_model):
     loss = FocalLoss()
     min_val_loss = 10000.0
     for epoch in range(num_epochs):
-        train_loss, train_acc, train_f1 = train_epoch(net, train_iter, loss, optimizer, device)
+        train_loss, train_acc, train_f1 = train_epoch(net, train_iter, loss, optimizer, device, threshold)
         train_loss_all.append(train_loss)
         train_acc_all.append(train_acc)
         train_f1_all.append(train_f1)
-        val_loss, val_acc, val_f1 = evaluate_accuracy(net, val_iter, loss, device)
+        val_loss, val_acc, val_f1 = evaluate_accuracy(net, val_iter, loss, device, threshold)
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         val_f1_all.append(val_f1)

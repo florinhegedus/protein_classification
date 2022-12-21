@@ -20,7 +20,8 @@ def main():
 
     print("Starting training...")
     train(model, train_iter, val_iter, num_epochs=config['training']['num_epochs'], 
-            lr=config['training']['learning_rate'], device=try_gpu(), 
+            lr=config['training']['learning_rate'], 
+            threshold=0.2, device=try_gpu(), 
             save_model=config['training']['save_model'])
 
     
