@@ -20,6 +20,15 @@
             "program": "evaluate.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: Oversample",
+            "type": "python",
+            "request": "launch",
+            "program": "oversample.py",
+            "args" : ["config.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
