@@ -4,14 +4,15 @@ training:
   train_on_validation: False
   batch_size: 16
   num_workers: 4
-  learning_rate: 0.01
+  learning_rate: 0.005
+  augmentation: True
   train_val_split: 0.7
   num_epochs: 50
   save_model: True
 
 model:
   type: 'resnet34'
-  image_size: [128, 128]
+  image_size: [256, 256]
   continue_training: False
   weights_path: 'checkpoints/epoch_0.pth'
 

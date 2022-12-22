@@ -73,9 +73,9 @@ def evaluate_accuracy(net, data_iter, loss, device, threshold):
             l = loss(y_hat, y)
             total_loss += float(l)
             total_hits += acc(y_hat, y, threshold)
-            total_samples += y.numel()
+            total_samples += 1
             total_f1 += batch_f1_score(y_hat, y, threshold)
-    return float(total_loss) / len(data_iter), float(total_hits) / total_samples  * 100, total_f1 / (total_samples / 28 * 100)
+    return float(total_loss) / len(data_iter), float(total_hits) / total_samples, float(total_f1) / total_samples
 
 def train_epoch(net, train_iter, loss, optimizer, device, threshold):  
     # Set the model to training mode
@@ -101,9 +101,9 @@ def train_epoch(net, train_iter, loss, optimizer, device, threshold):
         total_loss += float(l)
         total_hits += acc(y_hat, y, threshold)
         train_f1 += batch_f1_score(y_hat, y, threshold)
-        total_samples += y.numel()
+        total_samples += 1
     # Return training loss and training accuracy
-    return float(total_loss) / len(train_iter), float(total_hits) / total_samples  * 100, train_f1 / (total_samples / (len(X) * 28))
+    return float(total_loss) / len(train_iter), float(total_hits) / total_samples, float(train_f1) / total_samples
 
 def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_model):
     """Train a model."""
@@ -115,6 +115,9 @@ def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_mod
     val_f1_all = []
     print('Training on', device)
     net.to(device)
+    print("Freezing the resnet layers for the first 10 epochs...")
+    for param in net.encoder.parameters():
+        param.requires_grad = False
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = FocalLoss()
     min_val_loss = 10000.0
@@ -127,9 +130,7 @@ def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_mod
         val_loss_all.append(val_loss)
         val_acc_all.append(val_acc)
         val_f1_all.append(val_f1)
-        print(f'Epoch {epoch + 1}, \
-                    Train loss {train_loss:.4f}, Train accuracy {train_acc:.4f}, Train F1 score {train_f1:.4f}\
-                    Validation loss {val_loss:.4f}, Validation accuracy {val_acc:.4f}, Validation F1 score {val_f1:.4f}')
+        print(f'Epoch {epoch + 1}, \nTrain loss {train_loss:.4f}, Train accuracy {train_acc:.4f}, Train F1 score {train_f1:.4f}\nValidation loss {val_loss:.4f}, Validation accuracy {val_acc:.4f}, Validation F1 score {val_f1:.4f}')
 
         # save model if it has lower loss and save_model equals True
         if val_loss < min_val_loss and save_model:
@@ -138,3 +139,9 @@ def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_mod
         
         plot_loss(train_loss_all, val_loss_all)
         plot_accuracy(train_acc_all, val_acc_all)
+
+        # Unfreeze resnet layers after 10 epochs
+        if epoch == 10:
+            print("Unfreezing the resnet layers")
+            for param in net.encoder.parameters():
+                param.requires_grad = True

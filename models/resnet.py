@@ -35,14 +35,12 @@ class ResNet(nn.Module):
             nn.Linear(256, 256), 
             nn.ReLU(),
             nn.Linear(256, 28),
-            nn.ReLU()
         )
         self.activation = nn.Sigmoid()
 
     def forward(self, x):
         x = self.encoder(x)
         x = self.neck(x)
-        # x = self.activation(x)
         return x
 
 def load_model(model_config):
