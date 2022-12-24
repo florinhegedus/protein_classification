@@ -7,17 +7,18 @@ training:
   learning_rate: 0.005
   augmentation: True
   train_val_split: 0.7
-  num_epochs: 50
+  num_epochs: 30
   save_model: True
 
 model:
   type: 'resnet34'
   image_size: [256, 256]
   continue_training: False
-  weights_path: 'checkpoints/epoch_0.pth'
+  weights_path: 'checkpoints/epoch_23.pth'
 
 data_pipe:
   path: 'H:\datasets' #'D:\master\Bio\project\human-protein-atlas-image-classification'
-  annotations: 'train.csv'
+  annotations: 'oversampled2.csv'
   train_dir: 'train'
+  test_annotations: 'sample_submission.csv'
   test_dir: 'test'

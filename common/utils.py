@@ -3,8 +3,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 import torch
 import time
-from common.focal_loss import FocalLoss
+import json
 from sklearn.metrics import f1_score
+from common.focal_loss import FocalLoss
 
 
 def display_image(img_path):
@@ -110,39 +111,57 @@ def train_epoch(net, train_iter, loss, optimizer, device, threshold):
     return train_loss, train_acc, train_f1
 
 
-def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_model):
+def update_metrics(metrics, train_metrics, val_metrics):
+    metrics['train_loss'].append(train_metrics[0])
+    metrics['train_acc'].append(train_metrics[1])
+    metrics['train_f1'].append(train_metrics[2])
+    metrics['val_loss'].append(val_metrics[0])
+    metrics['val_acc'].append(val_metrics[1])
+    metrics['val_f1'].append(val_metrics[2])
+
+    with open("metrics.json", "w") as file:
+        json.dump(metrics, file)
+
+    return metrics
+
+
+def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_model, continue_training):
     """Train a model."""
-    train_loss_all = []
-    train_acc_all = []
-    train_f1_all = []
-    val_loss_all = []
-    val_acc_all = []
-    val_f1_all = []
+    if continue_training:
+        with open("metrics.json") as file:
+            metrics = json.load(file)
+        continue_from_epoch = len(metrics['train_loss'])
+    else:
+        metrics = {'train_loss': [], 'train_acc': [], 'train_f1': [],
+                    'val_loss': [], 'val_acc': [], 'val_f1': []}
+        continue_from_epoch = 0
+    
     print('Training on', device)
     net.to(device)
-    print("Freezing the resnet layers for the first 10 epochs...")
-    for param in net.encoder.parameters():
-        param.requires_grad = False
+    if continue_from_epoch < 10:
+        print("Freezing the resnet layers for the first 10 epochs...")
+        for param in net.encoder.parameters():
+            param.requires_grad = False
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = FocalLoss()
     min_val_loss = 10000.0
     max_f1_score = 0
-    for epoch in range(num_epochs):
+    for epoch in range(continue_from_epoch, num_epochs, 1):
+        print(f"---Epoch {epoch}---")
         start = time.time()
         train_loss, train_acc, train_f1 = train_epoch(net, train_iter, loss, optimizer, device, threshold)
         end = time.time()
         print(f"Training time: {end - start}s")
-        train_loss_all.append(train_loss)
-        train_acc_all.append(train_acc)
-        train_f1_all.append(train_f1)
         start = time.time()
         val_loss, val_acc, val_f1 = evaluate_accuracy(net, val_iter, loss, device, threshold)
         end = time.time()
         print(f"Evaluate on validation time: {end - start}s")
-        val_loss_all.append(val_loss)
-        val_acc_all.append(val_acc)
-        val_f1_all.append(val_f1)
-        print(f'Epoch {epoch + 1}, \nTrain loss {train_loss:.4f}, Train accuracy {train_acc:.4f}, Train F1 score {train_f1:.4f}\nValidation loss {val_loss:.4f}, Validation accuracy {val_acc:.4f}, Validation F1 score {val_f1:.4f}')
+        print(f'Train loss {train_loss:.4f}, Train accuracy {train_acc:.4f}, Train F1 score {train_f1:.4f}\nValidation loss {val_loss:.4f}, Validation accuracy {val_acc:.4f}, Validation F1 score {val_f1:.4f}')
+
+        # update metrics
+        train_metrics = (train_loss, train_acc, train_f1)
+        val_metrics = (val_loss, val_acc, val_f1)
+        metrics = update_metrics(metrics, train_metrics, val_metrics)
 
         # save model if it has lower loss and save_model equals True
         if (val_loss < min_val_loss or val_f1 > max_f1_score) and save_model:
@@ -150,12 +169,46 @@ def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_mod
             max_f1_score = val_f1
             save_model_weights(net, epoch)
         
-        plot_graph(train_loss_all, val_loss_all, 'loss')
-        plot_graph(train_acc_all, val_acc_all, 'accuracy')
-        plot_graph(train_f1_all, val_f1_all, 'f1_score')
+        plot_graph(metrics['train_loss'], metrics['val_loss'], 'loss')
+        plot_graph(metrics['train_acc'], metrics['val_acc'], 'accuracy')
+        plot_graph(metrics['train_f1'], metrics['val_f1'], 'f1_score')
 
         # Unfreeze resnet layers after 10 epochs
         if epoch == 10:
             print("Unfreezing the resnet layers")
             for param in net.encoder.parameters():
                 param.requires_grad = True
+            print("Freezing the neck layers")
+            for param in net.neck.parameters():
+                param.requires_grad = False
+        elif epoch == 20:
+            print("Unfreezing the neck layers")
+            for param in net.neck.parameters():
+                param.requires_grad = True
+
+
+def postprocess(y_hat, img_labels, idx, threshold):
+    for sample in y_hat:
+        res = (sample > threshold).int()
+        s = ' '.join([str(i) for i in np.nonzero(res.cpu().numpy())[0]])
+        img_labels.iloc[idx, 1] = s
+        idx += 1
+
+    return img_labels, idx
+
+
+def test(net, test_iter, img_labels, threshold, device):
+    """Test a model."""
+    print('Testing on', device)
+    net.to(device)
+    net.eval()  # Set the model to evaluation mode
+    idx = 0
+    
+    with torch.no_grad():
+        for X, y in test_iter:
+            X, y = X.to(device), y.to(device)
+            y_hat = net(X)
+            img_labels, idx = postprocess(y_hat, img_labels, idx, threshold)
+            print(f"    {idx/16}/{len(test_iter)}", end="\r")
+
+    img_labels.to_csv('sample_submission.csv', index=False)

@@ -43,9 +43,9 @@ class ResNet(nn.Module):
         x = self.neck(x)
         return x
 
-def load_model(model_config):
+def load_model(model_config, evaluate):
     model = ResNet(model_config=model_config)
-    if model_config['continue_training']:
+    if model_config['continue_training'] or evaluate:
         print("Loading trained model...")
         model.load_state_dict(torch.load(model_config['weights_path']))
     return model

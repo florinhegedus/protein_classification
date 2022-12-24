@@ -61,7 +61,9 @@ class ProteinAtlasDataset(Dataset):
         image = self.read_rgby(img_path, self.img_size)
         if self.augmentation:
             image = self.transform(image)
-        targets = np.array([int(x) for x in self.img_labels.iloc[idx, 1].split(' ')])
+        else:
+            image = ToTensor()(image)
+        targets = np.array([int(x) for x in str(self.img_labels.iloc[idx, 1]).split(' ')])
         label = np.sum(np.eye(len(name_label_dict))[targets], axis=0)
         return image, label
     
@@ -72,7 +74,7 @@ class ProteinAtlasDataset(Dataset):
                 cv2.imread(id + '_' + color + '.png', flags), size).astype(
                             np.float32) / 255 for color in colors]
         imgs = np.stack(imgs, axis=-1)
-        return imgs # np.moveaxis(imgs, -1, 0)
+        return imgs
 
 def load_data(config):
     annotations_file = os.path.join(config['data_pipe']['path'], 
@@ -100,4 +102,22 @@ def load_data(config):
                             num_workers=config['training']['num_workers'])
     
     return train_iter, val_iter
+
+def load_test_data(config):
+    annotations_file = os.path.join(config['data_pipe']['path'], 
+                                    config['data_pipe']['test_annotations'])
+    img_dir = os.path.join(config['data_pipe']['path'], 
+                             config['data_pipe']['test_dir'])
+
+    test_set = ProteinAtlasDataset(annotations_file=annotations_file,
+                                    img_dir=img_dir,
+                                    img_size=config['model']['image_size'],
+                                    augmentation=False)
+    
+    test_iter = DataLoader(test_set, 
+                            batch_size=config['training']['batch_size'], 
+                            shuffle=False,
+                            num_workers=config['training']['num_workers'])
+    
+    return test_iter, test_set.img_labels
 

@@ -18,6 +18,7 @@
             "type": "python",
             "request": "launch",
             "program": "evaluate.py",
+            "args" : ["config.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
         },

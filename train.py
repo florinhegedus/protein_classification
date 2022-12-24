@@ -16,13 +16,14 @@ def main():
     train_iter, val_iter = load_data(config)
 
     print("Loading model...")
-    model = load_model(config['model'])
+    model = load_model(config['model'], evaluate=False)
 
     print("Starting training...")
     train(model, train_iter, val_iter, num_epochs=config['training']['num_epochs'], 
             lr=config['training']['learning_rate'], 
             threshold=0.0, device=try_gpu(), 
-            save_model=config['training']['save_model'])
+            save_model=config['training']['save_model'],
+            continue_training=config['model']['continue_training'])
 
     
 if __name__ == '__main__':
