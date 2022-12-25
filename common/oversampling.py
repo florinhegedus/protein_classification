@@ -8,7 +8,7 @@ class Oversampling:
         self.name_label_dict = name_label_dict
         self.samples_per_class = self.calculate_class_imbalance()
     
-    def calculate_class_imbalance(self):
+    def calculate_class_imbalance(self, reverse=False):
         num_samples = len(self.img_labels)
         samples_per_class = np.zeros(len(self.name_label_dict))
         for idx in range(num_samples):
@@ -18,31 +18,42 @@ class Oversampling:
         samples_dict = {}
         for idx in range(len(self.name_label_dict)):
             samples_dict[idx] = int(samples_per_class[idx])
-        ordered = dict(sorted(samples_dict.items(), key=lambda item:item[1], reverse=False))
+        ordered = dict(sorted(samples_dict.items(), key=lambda item:item[1], reverse=reverse))
         return ordered
 
     def __call__(self, file_name):
-        num_duplicates = [8, 4, 1]
-        n, i = 0, 0
-        for key in self.samples_per_class.keys():
-            print(n)
-            n += 1
-            if n % 7 == 0:
-                i += 1
+        num_duplicates = [8, 4, 2, 1]
+        for i, key in enumerate(self.samples_per_class.keys()):
+            print(f"--{i}-- Duplicating items of class {key}")
             for idx in range(len(self.img_labels)):
-                if n < 20:
+                if i < 20:
                     if self.sample_contains_key(idx, key):
-                        self.duplicate_row(idx, num_duplicates[i])
+                        self.duplicate_row(idx, num_duplicates[i//5])
                 else:
                     break
+        
+        # Undersampling
+        ordered = self.calculate_class_imbalance(reverse=True)
+        to_drop = []
+        for i, key in enumerate(ordered.keys()):
+            print(f"--{i}-- Removing items of class {key}, no of items: {ordered[key]}")
+            for idx in range(len(self.img_labels)):
+                if ordered[key] > 10000:
+                    if self.sample_contains_key(idx, key, single=True):
+                        to_drop.append(idx)
+                        ordered[key] -= 1
+                else:
+                    break
+        self.img_labels.drop(to_drop, axis=0, inplace=True)
         self.img_labels.to_csv(file_name, index=False)
+        print(self.calculate_class_imbalance(reverse=False))
         return self.img_labels
 
-    def sample_contains_key(self, idx, key):
+    def sample_contains_key(self, idx, key, single=False):
         targets = [int(x) for x in self.img_labels.iloc[idx, 1].split(' ')]
-        most_freq_classes = [0, 25, 21]
-        intersection = [x for x in targets if x in most_freq_classes]
-        if key in targets and len(intersection) == 0:
+        if single and len(targets) != 1:
+            return False
+        if key in targets:
             return True
         return False
 
