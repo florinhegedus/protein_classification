@@ -68,7 +68,7 @@ class ProteinAtlasDataset(Dataset):
         return image, label
     
     def read_rgby(self, id, size):
-        colors = ['red', 'green', 'blue', 'yellow']
+        colors = ['red', 'green', 'blue']
         flags = cv2.IMREAD_GRAYSCALE
         imgs = [cv2.resize(
                 cv2.imread(id + '_' + color + '.png', flags), size).astype(

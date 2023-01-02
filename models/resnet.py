@@ -13,10 +13,10 @@ class ResNet(nn.Module):
 
         if not continue_training:
             self.encoder = timm.create_model(model_type, num_classes=28, 
-                                                in_chans=4, pretrained=True)
+                                                in_chans=3, pretrained=True)
         else:
             self.encoder = timm.create_model(model_type, num_classes=28, 
-                                                in_chans=4, pretrained=False)
+                                                in_chans=3, pretrained=False)
         
         self.encoder = nn.Sequential(
             self.encoder.conv1,

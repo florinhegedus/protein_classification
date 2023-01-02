@@ -178,13 +178,6 @@ def train(net, train_iter, val_iter, num_epochs, lr, threshold, device, save_mod
             print("Unfreezing the resnet layers")
             for param in net.encoder.parameters():
                 param.requires_grad = True
-            print("Freezing the neck layers")
-            for param in net.neck.parameters():
-                param.requires_grad = False
-        elif epoch == 20:
-            print("Unfreezing the neck layers")
-            for param in net.neck.parameters():
-                param.requires_grad = True
 
 
 def postprocess(y_hat, img_labels, idx, threshold):
