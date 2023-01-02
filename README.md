@@ -7,7 +7,7 @@ conda activate protein_classification
 ```
 
 ## Run
-Download the Human Protein Atlas Image Classification Dataset from [kaggle](https://www.kaggle.com/competitions/human-protein-atlas-image-classification/data)
+Download the Human Protein Atlas Image Classification Dataset from [kaggle](https://www.kaggle.com/competitions/human-protein-atlas-image-classification/data).
 Update the dataset path in config.yaml to match the one on your system.
 
 ### Oversample the dataset (optionally)
@@ -23,7 +23,7 @@ python train.py config.yaml
 ```
 
 ### Evaluate
-Generate the sample_submission.csv file (predictions of the model on the test set):
+Generate the sample_submission.csv file (predictions of the model on the test set:
 ```
 python evaluate.py config.yaml
 ```
